@@ -1,0 +1,21 @@
+---
+- name: create ext volume
+  file: state=directory path={{ ext_ganglia_master_volume }}
+
+- name: put gmetad.conf
+  template: src=gmetad.conf dest={{ ext_ganglia_master_volume }}/gmetad.conf
+
+- name: create /var/lib/ganglia
+  file: state=directory path={{ ext_ganglia_master_volume }}/ganglia owner=999 group=999
+
+- name: create /var/lib/ganglia/rrds
+  file: state=directory path={{ ext_ganglia_master_volume }}/ganglia/rrds owner=999 group=999
+
+- name: check if ganglia-master container is started
+  command: bash -c "docker ps | grep ganglia-master"
+  ignore_errors: True
+  register: result
+
+- name: start a ganglia-master container
+  command: docker run -d -h gm-{{ ansible_hostname }} -p=8080:80 -v {{ ext_ganglia_master_volume }}/gmetad.conf:/etc/ganglia/gmetad.conf -v {{ ext_ganglia_master_volume }}/ganglia:/var/lib/ganglia -name ganglia-master gitinsky/ganglia-master:0.1.0
+  when: result|failed
